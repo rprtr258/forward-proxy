@@ -23,6 +23,9 @@ func (p *proxy) ServeHTTP(wr http.ResponseWriter, req *http.Request) {
 
 	log.Printf("remote_addr=%#v status=%#v status_code=%#v\n", req.RemoteAddr, resp.Status, resp.StatusCode)
 
+	for key, value := range resp.Header {
+		wr.Header().Set(key, value[0])
+	}
 	wr.WriteHeader(resp.StatusCode)
 	io.Copy(wr, resp.Body)
 }
