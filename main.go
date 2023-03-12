@@ -5,15 +5,17 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 )
 
 type proxy struct {
+	remoteAddr string
 }
 
 func (p *proxy) ServeHTTP(wr http.ResponseWriter, req *http.Request) {
 	log.Printf("remote_addr=%#v method=%#v url=%#v\n", req.RemoteAddr, req.Method, req.URL)
 
-	resp, err := http.Get("https://pnpm.io" + req.URL.Path)
+	resp, err := http.Get(p.remoteAddr + req.URL.Path)
 	if err != nil {
 		http.Error(wr, "Server Error", http.StatusInternalServerError)
 		log.Println("ServeHTTP:", err)
@@ -34,9 +36,16 @@ func main() {
 	var addr = flag.String("addr", "0.0.0.0:8080", "The addr of the application.")
 	flag.Parse()
 
-	handler := &proxy{}
+	remoteAddr, ok := os.LookupEnv("REMOTE_ADDR")
+	if !ok {
+		log.Fatal("REMOTE_ADDR is not set")
+	}
 
-	log.Println("Starting proxy server on", *addr)
+	handler := &proxy{
+		remoteAddr: remoteAddr,
+	}
+
+	log.Printf("Starting proxy server on %s\n", *addr)
 	if err := http.ListenAndServe(*addr, handler); err != nil {
 		log.Fatal("ListenAndServe:", err)
 	}
